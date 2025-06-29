@@ -1,108 +1,249 @@
-/**
- * *****************************************************************************
- * @file        main.c
- * @brief       用于实现排序的一个工程
- * @author      yiran-111 (1179862677@qq.com)
- * @date        2025-06-04
- * @copyright   buaa
- * *****************************************************************************
- */
 #include <stdio.h>
-/**
- * @name:quick_sort1
- * @msg:此函数用于快速排序
- * @return {*}
- * @param {int} NeedSort
- * @param {int} left
- * @param {int} right
- */
-void quick_sort1(int NeedSort[], int left, int right)
-{
-    /**
-     * @brief
-     * 快速排序：第一步确定分界点x第二步调整区间，令有小于等于
-     * x的在a区间，大于x的在b区间。第三步递归处理左右两段区间。
-     *
-     * 主要思想是分治。最难的一步是调整范围：从最简单的开始：新
-     * 建两个数组，扫描一遍按照上面思想，插入a和插入b，再把a和b
-     * 合并。而比较复杂且占用空间更低的算法是，建立两个指针i和j
-     * 一个放在头一个放在尾，交替移动，直到遇到小于等于或大于等
-     * 于x的数为止。一旦发现，就把这两个指向的值交换，继续推进。
-     * 在i和j互相错开，或i和j处于同一位置，则终止。
-     */
-    if (left >= right)
-        return;
-    int x = NeedSort[right], i = left - 1, j = right + 1, swap = 0;
-    /**边界问题：
-     * 用i和用j两种情况进行递归，就要考虑到数组上下界的问题，
-     * 用了i就不能用左边界，用了j就不能用右边界，否则对付一些
-     * 特殊数组，就会出现一边区间为负，另一边区间仍为原本的
-     * 情况，这是不希望看到的。边界问题不要过多考虑，看模板
-     * 即可，重点理解它的思想。
-     */
-    while (i < j)
-    {
-        do
-        {
-            i++;
-        } while (NeedSort[i] < x);
-        do
-        {
-            j--;
-        } while (NeedSort[j] > x);
-        if (i < j)
-        {
-            swap = NeedSort[i];
-            NeedSort[i] = NeedSort[j];
-            NeedSort[j] = swap;
-        }
-    }
-    quick_sort1(NeedSort, left, i - 1);
-    quick_sort1(NeedSort, i, right);
-}
-/**
- * @name: merge_sort
- * @msg: 归并排序的用法
- * @return {*}
- * @param {int} NeedSort
- * @param {int} left
- * @param {int} right
- */
-void merge_sort(int NeedSort[], int left, int right)
-{
-    /**
-     * 归并排序的基本思想是，取数组中点位置为分界点，进行
-     * 递归排序，用指针交替移动的方式把两个拆分数组合二为一。
-     */
-    if (left >= right)
-        return;
-    int mid = (left + right) >> 1;
-    merge_sort(NeedSort, left, mid);
-    merge_sort(NeedSort, mid + 1, right);
+#include <stdlib.h>
+#include <conio.h>
+#include <windows.h> // 需要此头文件以控制光标
 
-    int k = 0, i = left, j = mid + 1;
-    int temp[100];
-    while (i <= mid && j <= right)
-    {
-        if (NeedSort[i] <= NeedSort[j])
-            temp[k++] = NeedSort[i++];
-        else
-            temp[k++] = NeedSort[j++];
-    }
-    while (i <= mid)
-        temp[k++] = NeedSort[i++];
-    while (j <= right)
-        temp[k++] = NeedSort[j++];
-    for (i = left, j = 0; i <= right; i++, j++)
-        NeedSort[i] = temp[j];
-}
+// --- 游戏设置 ---
+#define WIDTH 40
+#define HEIGHT 20
+
+// --- 全局变量 ---
+int gameOver;
+int x, y;           // 蛇头坐标
+int fruitX, fruitY; // 食物坐标
+int score;
+int tailX[100], tailY[100];
+int nTail;
+// 新增变量，用于记录蛇尾最后一格的旧位置，以便擦除它
+int oldTailX, oldTailY;
+enum eDirection
+{
+    STOP = 0,
+    LEFT,
+    RIGHT,
+    UP,
+    DOWN
+};
+enum eDirection dir;
+HANDLE hConsole; // 控制台句柄
+
+// --- 函数声明 ---
+void gotoxy(int x, int y);
+void Setup();
+void Draw();
+void Input();
+void Logic();
+
+// --- 主函数 ---
 int main()
 {
-    int a[] = {10, 9, 8, 7, 6, 5, 4, 3, 2, 1};
-    merge_sort(a, 0, 9);
-    for (int index = 0; index < 10; index++)
+    Setup();
+    while (!gameOver)
     {
-        printf("%d ", a[index]);
+        Draw();
+        Input();
+        Logic();
+        // 可以适当调整Sleep时间来改变游戏速度
+        Sleep(80);
     }
+    gotoxy(0, HEIGHT + 2); // 将光标移动到游戏区域下方
+    printf("Game Over! Your score: %d\n", score);
     return 0;
+}
+
+/**
+ * @brief 将光标移动到控制台的指定位置 (x, y)
+ * @param x 列坐标
+ * @param y 行坐标
+ */
+void gotoxy(int x, int y)
+{
+    COORD coord;
+    coord.X = x;
+    coord.Y = y;
+    SetConsoleCursorPosition(hConsole, coord);
+}
+
+/**
+ * @brief 初始化游戏状态 (重写)
+ */
+void Setup()
+{
+    hConsole = GetStdHandle(STD_OUTPUT_HANDLE); // 获取控制台句柄
+    // 隐藏光标，让画面更干净
+    CONSOLE_CURSOR_INFO cursor_info = {1, 0};
+    SetConsoleCursorInfo(hConsole, &cursor_info);
+
+    gameOver = 0;
+    dir = STOP;
+    x = WIDTH / 2;
+    y = HEIGHT / 2;
+    fruitX = rand() % WIDTH;
+    fruitY = rand() % HEIGHT;
+    score = 0;
+    nTail = 0;
+
+    // --- 只在Setup中绘制一次静态内容 ---
+    system("cls"); // 开始前清一次屏即可
+
+    // 绘制上下边框
+    for (int i = 0; i < WIDTH + 2; i++)
+    {
+        gotoxy(i, 0);
+        printf("#");
+        gotoxy(i, HEIGHT + 1);
+        printf("#");
+    }
+    // 绘制左右边框
+    for (int i = 0; i < HEIGHT + 1; i++)
+    {
+        gotoxy(0, i);
+        printf("#");
+        gotoxy(WIDTH + 1, i);
+        printf("#");
+    }
+
+    // 初始绘制食物
+    gotoxy(fruitX + 1, fruitY + 1);
+    printf("o");
+}
+
+/**
+ * @brief 绘制游戏界面 (重写为增量更新)
+ */
+void Draw()
+{
+    // 1. 绘制新的蛇头
+    gotoxy(x + 1, y + 1);
+    printf("@");
+
+    // 2. 如果蛇在移动，将旧的蛇头位置绘制成身体
+    if (nTail > 0)
+    {
+        gotoxy(tailX[0] + 1, tailY[0] + 1);
+        printf("@");
+    }
+
+    // 3. 擦除蛇尾的最后一格
+    // 只有当蛇移动了（dir != STOP）并且有尾巴时才擦除
+    if (dir != STOP)
+    {
+        gotoxy(oldTailX + 1, oldTailY + 1);
+        printf(" ");
+    }
+
+    // 4. 更新分数显示
+    gotoxy(0, HEIGHT + 2);
+    printf("Score: %d", score);
+}
+
+/**
+ * @brief 处理用户输入 (无变化)
+ */
+void Input()
+{
+    if (_kbhit())
+    {
+        switch (_getch())
+        {
+        case 'a':
+            if (dir != RIGHT)
+                dir = LEFT;
+            break;
+        case 'd':
+            if (dir != LEFT)
+                dir = RIGHT;
+            break;
+        case 'w':
+            if (dir != DOWN)
+                dir = UP;
+            break;
+        case 's':
+            if (dir != UP)
+                dir = DOWN;
+            break;
+        case 'x':
+            gameOver = 1;
+            break;
+        }
+    }
+}
+
+/**
+ * @brief 更新游戏逻辑 (微调)
+ */
+void Logic()
+{
+    // 记录移动前蛇尾的最后一格坐标
+    if (nTail > 0)
+    {
+        oldTailX = tailX[nTail - 1];
+        oldTailY = tailY[nTail - 1];
+    }
+    else
+    { // 如果没有尾巴，就记录当前蛇头位置，因为蛇头移动后这里需要被清空
+        oldTailX = x;
+        oldTailY = y;
+    }
+
+    // 1. 更新蛇身位置 (逻辑和之前一样)
+    int prevX = tailX[0];
+    int prevY = tailY[0];
+    int prev2X, prev2Y;
+    if (nTail > 0)
+    {
+        tailX[0] = x;
+        tailY[0] = y;
+    }
+    for (int i = 1; i < nTail; i++)
+    {
+        prev2X = tailX[i];
+        prev2Y = tailY[i];
+        tailX[i] = prevX;
+        tailY[i] = prevY;
+        prevX = prev2X;
+        prevY = prev2Y;
+    }
+
+    // 2. 根据方向更新蛇头位置 (逻辑和之前一样)
+    switch (dir)
+    {
+    case LEFT:
+        x--;
+        break;
+    case RIGHT:
+        x++;
+        break;
+    case UP:
+        y--;
+        break;
+    case DOWN:
+        y++;
+        break;
+    }
+
+    // 3. 碰撞检测 (有微调，撞墙现在是撞到边界内)
+    if (x >= WIDTH || x < 0 || y >= HEIGHT || y < 0)
+    {
+        gameOver = 1;
+    }
+    for (int i = 0; i < nTail; i++)
+    {
+        if (tailX[i] == x && tailY[i] == y)
+        {
+            gameOver = 1;
+        }
+    }
+
+    // 4. 吃食物检测
+    if (x == fruitX && y == fruitY)
+    {
+        score += 10;
+        nTail++;
+        // 重新生成食物并立即绘制
+        fruitX = rand() % WIDTH;
+        fruitY = rand() % HEIGHT;
+        gotoxy(fruitX + 1, fruitY + 1);
+        printf("o");
+    }
 }

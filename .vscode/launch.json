@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "c:/Users/11798/Desktop/codeC-Templete/c_project/sort_project",
-      "program": "c:/Users/11798/Desktop/codeC-Templete/c_project/sort_project/build/Debug/outDebug",
+      "cwd": "f:/C++manual/codeC-Templete/cpp_project/project1",
+      "program": "f:/C++manual/codeC-Templete/cpp_project/project1/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
